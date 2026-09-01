@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Norozz — Partner KYC</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="kyc.css" />
+  </head>
+  <body class="kyc-body">
+
+    <div class="kyc-wrapper">
+
+      <!-- ── Header ── -->
+      <div class="kyc-header">
+        <a href="index.html" class="kyc-back">← Back</a>
+        <h1>🪪 Partner KYC Verification</h1>
+        <p>Complete all steps to activate your partner account</p>
+      </div>
+
+      <!-- ── Progress Bar ── -->
+      <div class="kyc-progress-wrap">
+        <div class="kyc-progress-bar">
+          <div class="kyc-progress-fill" id="progressFill"></div>
+        </div>
+        <div class="kyc-steps-labels" id="stepsLabels"></div>
+      </div>
+
+      <!-- ── Step Cards ── -->
+      <div class="kyc-card" id="kycCard">
+
+        <!-- STEP 1: Registration -->
+        <div class="kyc-step" id="step-1">
+          <div class="step-icon">📝</div>
+          <h2>Partner Registration</h2>
+          <p class="step-desc">Create your Norozz partner account</p>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" placeholder="Enter your full name" />
+          </div>
+          <div class="form-group">
+            <label>Mobile Number</label>
+            <div class="input-prefix">
+              <span>+91</span>
+              <input type="tel" id="reg-mobile" placeholder="10-digit mobile number" maxlength="10" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="reg-email" placeholder="your@email.com" />
+          </div>
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" id="reg-city" placeholder="Your city" />
+          </div>
+          <button class="kyc-btn primary" id="regSubmitBtn" onclick="submitRegistration()">
+            Continue →
+          </button>
+        </div>
+
+        <!-- STEP 2: Mobile OTP -->
+        <div class="kyc-step hidden" id="step-2">
+          <div class="step-icon">📱</div>
+          <h2>Mobile OTP Verification</h2>
+          <p class="step-desc">Enter the 6-digit OTP sent to <strong id="otpMobileDisplay"></strong></p>
+          <div class="otp-boxes" id="otpBoxes">
+            <input class="otp-box" type="text" maxlength="1" />
+            <input class="otp-box" type="text" maxlength="1" />
+            <input class="otp-box" type="text" maxlength="1" />
+            <input class="otp-box" type="text" maxlength="1" />
+            <input class="otp-box" type="text" maxlength="1" />
+            <input class="otp-box" type="text" maxlength="1" />
+          </div>
+          <div class="otp-timer" id="otpTimer">Resend OTP in <span id="timerCount">30</span>s</div>
+          <button class="kyc-btn ghost hidden" id="resendOtpBtn" onclick="sendOtp()">Resend OTP</button>
+          <button class="kyc-btn primary" onclick="verifyOtp()">Verify OTP →</button>
+        </div>
+
+        <!-- STEP 3: PAN Verification -->
+        <div class="kyc-step hidden" id="step-3">
+          <div class="step-icon">🪪</div>
+          <h2>PAN Card Verification</h2>
+          <p class="step-desc">Enter your PAN number for identity verification</p>
+          <div class="form-group">
+            <label>PAN Number</label>
+            <input type="text" id="pan-number" placeholder="ABCDE1234F" maxlength="10"
+              style="text-transform:uppercase;letter-spacing:2px;font-size:1.1rem;font-weight:600;" />
+          </div>
+          <button class="kyc-btn primary" onclick="verifyPAN()">Verify PAN →</button>
+          <div id="panResult" class="verify-result hidden"></div>
+        </div>
+
+        <!-- STEP 4: DigiLocker (Real Zoop SDK Flow) -->
+        <div class="kyc-step hidden" id="step-4">
+          <div class="step-icon">📂</div>
+          <h2>DigiLocker Verification</h2>
+          <p class="step-desc">Verify Aadhaar, PAN & Driving Licence via official DigiLocker</p>
+
+          <!-- State: IDLE -->
+          <div id="digi-idle">
+            <div class="digi-info-box">
+              <div class="digi-info-row">🏛️ <span>Aadhaar Card</span><span class="doc-badge pending">Required</span></div>
+              <div class="digi-info-row">🪪 <span>PAN Card</span><span class="doc-badge pending">Required</span></div>
+              <div class="digi-info-row">🚗 <span>Driving Licence</span><span class="doc-badge pending">Required</span></div>
+            </div>
+            <div class="digi-steps-info">
+              <div class="digi-step-row"><span class="digi-num">1</span>Click the button below to open DigiLocker</div>
+              <div class="digi-step-row"><span class="digi-num">2</span>Login with your Aadhaar & OTP on DigiLocker</div>
+              <div class="digi-step-row"><span class="digi-num">3</span>Allow consent & submit documents</div>
+              <div class="digi-step-row"><span class="digi-num">4</span>Return here — verification auto-completes</div>
+            </div>
+            <button class="kyc-btn primary" id="openDigilockerBtn" onclick="startDigilocker()">
+              📂 Open DigiLocker
+            </button>
+          </div>
+
+          <!-- State: LOADING (init in progress) -->
+          <div id="digi-loading" class="hidden">
+            <div class="digi-spinner-wrap">
+              <div class="digi-spinner"></div>
+              <p>Initializing DigiLocker session...</p>
+            </div>
+          </div>
+
+          <!-- State: WAITING (tab opened, polling) -->
+          <div id="digi-waiting" class="hidden">
+            <div class="digi-waiting-wrap">
+              <div class="digi-pulse">📂</div>
+              <h3>DigiLocker is open in a new tab</h3>
+              <p>Complete the verification there and come back here.</p>
+              <div class="digi-poll-status" id="digiPollStatus">Waiting for completion...</div>
+              <button class="kyc-btn ghost sm" onclick="checkDigiStatus()">🔄 Check Status Manually</button>
+            </div>
+          </div>
+
+          <!-- State: SUCCESS -->
+          <div id="digi-success" class="hidden">
+            <div class="digi-success-wrap">
+              <div class="digi-check">✅</div>
+              <h3>DigiLocker Verified!</h3>
+              <div class="digi-docs-result" id="digiDocsResult"></div>
+            </div>
+            <button class="kyc-btn primary" onclick="goToStep(5)">Continue →</button>
+          </div>
+
+          <!-- State: FAILED -->
+          <div id="digi-failed" class="hidden">
+            <div class="verify-result error" id="digiFailMsg"></div>
+            <button class="kyc-btn ghost" onclick="resetDigilocker()">🔄 Try Again</button>
+          </div>
+        </div>
+
+        <!-- STEP 5: Bank Account -->
+        <div class="kyc-step hidden" id="step-5">
+          <div class="step-icon">🏦</div>
+          <h2>Bank Account Verification</h2>
+          <p class="step-desc">Verify your bank account for payments</p>
+          <div class="form-group">
+            <label>Account Holder Name</label>
+            <input type="text" id="bank-name" placeholder="As per bank records" />
+          </div>
+          <div class="form-group">
+            <label>Account Number</label>
+            <input type="text" id="bank-account" placeholder="Enter account number" />
+          </div>
+          <div class="form-group">
+            <label>IFSC Code</label>
+            <input type="text" id="bank-ifsc" placeholder="SBIN0001234" maxlength="11"
+              style="text-transform:uppercase;letter-spacing:1px;" />
+            <div id="bankDetails" class="bank-details hidden"></div>
+          </div>
+          <button class="kyc-btn ghost sm" onclick="lookupIFSC()" style="margin-bottom:12px">
+            🔍 Lookup Bank from IFSC
+          </button>
+          <button class="kyc-btn primary" onclick="verifyBank()">Verify Bank Account →</button>
+          <div id="bankResult" class="verify-result hidden"></div>
+        </div>
+
+        <!-- STEP 6: Selfie Upload -->
+        <div class="kyc-step hidden" id="step-6">
+          <div class="step-icon">🤳</div>
+          <h2>Selfie Capture</h2>
+          <p class="step-desc">Take a clear selfie for face verification</p>
+          <div class="selfie-area">
+            <div class="camera-preview" id="cameraPreview">
+              <video id="cameraVideo" autoplay playsinline></video>
+              <canvas id="cameraCanvas" style="display:none"></canvas>
+              <div class="camera-overlay">
+                <div class="face-guide"></div>
+              </div>
+            </div>
+            <div class="selfie-preview hidden" id="selfiePreview">
+              <img id="selfieImg" src="" alt="Selfie" />
+            </div>
+          </div>
+          <div class="selfie-actions">
+            <button class="kyc-btn ghost" id="startCameraBtn" onclick="startCamera()">📷 Open Camera</button>
+            <button class="kyc-btn primary hidden" id="captureBtn" onclick="captureSelfie()">📸 Capture</button>
+            <button class="kyc-btn ghost hidden" id="retakeBtn" onclick="retakeSelfie()">🔄 Retake</button>
+            <label class="kyc-btn ghost" style="cursor:pointer">
+              📁 Upload Photo
+              <input type="file" id="selfieUpload" accept="image/*" style="display:none" onchange="uploadSelfie(event)" />
+            </label>
+          </div>
+          <button class="kyc-btn primary hidden" id="selfieNextBtn" onclick="goToStep(7)">Continue →</button>
+        </div>
+
+        <!-- STEP 7: Face Match + Liveness -->
+        <div class="kyc-step hidden" id="step-7">
+          <div class="step-icon">🔍</div>
+          <h2>Face Match & Liveness Check</h2>
+          <p class="step-desc">Matching your selfie with Aadhaar photo</p>
+          <div class="face-match-display">
+            <div class="face-card">
+              <img id="faceMatchSelfie" src="" alt="Your Selfie" />
+              <span>Your Selfie</span>
+            </div>
+            <div class="face-vs">VS</div>
+            <div class="face-card">
+              <div class="face-placeholder">🏛️<br/>Aadhaar<br/>Photo</div>
+              <span>Aadhaar</span>
+            </div>
+          </div>
+          <button class="kyc-btn primary" id="faceMatchBtn" onclick="runFaceMatch()">
+            🔍 Run Face Match & Liveness
+          </button>
+          <div id="faceMatchResult" class="verify-result hidden"></div>
+        </div>
+
+        <!-- STEP 8: Fraud / AML / CKYC -->
+        <div class="kyc-step hidden" id="step-8">
+          <div class="step-icon">🛡️</div>
+          <h2>Fraud, AML & CKYC Check</h2>
+          <p class="step-desc">Running background verification checks</p>
+          <div class="checks-list" id="checksList">
+            <div class="check-item" id="check-fraud">
+              <span class="check-icon">⏳</span>
+              <span class="check-label">Fraud Database Check</span>
+              <span class="check-status">Pending</span>
+            </div>
+            <div class="check-item" id="check-aml">
+              <span class="check-icon">⏳</span>
+              <span class="check-label">AML / Watchlist Screening</span>
+              <span class="check-status">Pending</span>
+            </div>
+            <div class="check-item" id="check-ckyc">
+              <span class="check-icon">⏳</span>
+              <span class="check-label">CKYC Registry Check</span>
+              <span class="check-status">Pending</span>
+            </div>
+            <div class="check-item" id="check-court">
+              <span class="check-icon">⏳</span>
+              <span class="check-label">Court Record Check</span>
+              <span class="check-status">Pending</span>
+            </div>
+          </div>
+          <button class="kyc-btn primary" id="runChecksBtn" onclick="runBackgroundChecks()">
+            🛡️ Run All Checks
+          </button>
+          <div id="checksResult" class="verify-result hidden"></div>
+        </div>
+
+        <!-- STEP 9: KYC Approved -->
+        <div class="kyc-step hidden" id="step-9">
+          <div class="step-icon success-icon">✅</div>
+          <h2>KYC Approved!</h2>
+          <p class="step-desc">Your partner account is now fully verified</p>
+          <div class="kyc-summary" id="kycSummary"></div>
+          <div class="approved-badge">
+            <div class="badge-circle">✓</div>
+            <div>
+              <strong>Verified Partner</strong>
+              <span>Norozz Certified</span>
+            </div>
+          </div>
+          <button class="kyc-btn primary large" onclick="goToDashboard()">
+            🚀 Go to Partner Dashboard →
+          </button>
+        </div>
+
+      </div><!-- /kyc-card -->
+
+      <!-- Global Status -->
+      <div id="kycStatus" class="kyc-status hidden"></div>
+
+    </div><!-- /kyc-wrapper -->
+
+    <script src="kyc.js"></script>
+  </body>
+</html>
